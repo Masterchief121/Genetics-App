@@ -5,20 +5,20 @@ import numpy as np
 
 # Streamlit app setup
 st.set_page_config(page_title="GeneViz", layout="wide")
-plt.style.use('dark_background')  # Dark theme consistent with Tkinter version
+plt.style.use('dark_background')
 
-# Sidebar for navigation (replaces Tkinter home screen buttons)
+# Sidebar for navigation
 st.sidebar.title("GeneViz")
 app_choice = st.sidebar.radio(
     "Select Tool",
     ["Home", "DNA Visualizer", "Inheritance Simulator", "Evolution Simulator", "DNA Translator"]
 )
 
-# Status message at the bottom (persistent across pages)
+# Status message
 status_placeholder = st.empty()
 status_placeholder.markdown("GeneViz - A Genetics Visualization App")
 
-# Main content based on sidebar selection
+# Main content
 if app_choice == "Home":
     st.title("Welcome to GeneViz")
     st.markdown("""
@@ -34,41 +34,36 @@ elif app_choice == "DNA Visualizer":
     st.header("DNA Visualizer")
     status_placeholder.markdown("DNA Visualizer")
 
-    # DNA input controls
-    dna_seq = st.text_input("DNA Sequence", value="ATGC")
+    # DNA input with key for state management
+    if "dna_seq" not in st.session_state:
+        st.session_state.dna_seq = "ATGC"
+    dna_seq = st.text_input("DNA Sequence", value=st.session_state.dna_seq, key="dna_seq_input")
+
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Random DNA", key="random_dna"):
             length = random.randint(5, 15)
             bases = ['A', 'T', 'G', 'C']
-            dna_seq = ''.join(random.choice(bases) for _ in range(length))
-            st.session_state.dna_seq = dna_seq  # Store in session state for rerender
+            st.session_state.dna_seq = ''.join(random.choice(bases) for _ in range(length))
+            # No need to rerun manually; key syncs it
     with col2:
         visualize = st.button("Visualize", key="visualize_dna")
-
-    if "dna_seq" in st.session_state:
-        dna_seq = st.session_state.dna_seq
 
     if visualize and dna_seq:
         sequence = dna_seq.upper()
         if not all(base in "ATGC" for base in sequence):
             st.error("DNA sequence can only contain A, T, G, C")
         else:
-            # Create figure
+            # Plotting logic (unchanged)
             fig, ax = plt.subplots(figsize=(4, 3))
             colors = {'A': '#FF5757', 'T': '#57FF57', 'G': '#5757FF', 'C': '#FFFF57'}
-
-            # Plot DNA sequence
             for i, base in enumerate(sequence):
-                # Top strand
                 ax.add_patch(plt.Rectangle((i, 0), 0.8, 0.8, color=colors[base], alpha=0.8))
                 ax.text(i + 0.4, 0.4, base, ha='center', va='center', fontweight='bold', fontsize=12, color='black')
-                # Bottom strand (complementary)
                 complement = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G'}[base]
                 ax.add_patch(plt.Rectangle((i, -1), 0.8, 0.8, color=colors[complement], alpha=0.8))
                 ax.text(i + 0.4, -0.6, complement, ha='center', va='center', fontweight='bold', fontsize=12, color='black')
                 ax.plot([i + 0.4, i + 0.4], [0, -0.2], 'white', alpha=0.7)
-
             ax.set_xlim(-0.5, len(sequence) + 0.5)
             ax.set_ylim(-1.5, 1.5)
             ax.set_title("DNA Double Helix", color='white', fontsize=14)
@@ -76,18 +71,15 @@ elif app_choice == "DNA Visualizer":
             ax.set_yticks([])
             for spine in ax.spines.values():
                 spine.set_visible(False)
-
             st.pyplot(fig)
 
-            # Stats
             gc_content = (sequence.count('G') + sequence.count('C')) / len(sequence) * 100
             st.markdown(f"**Length:** {len(sequence)} bp | **GC:** {gc_content:.1f}% | **AT:** {100 - gc_content:.1f}%")
 
 elif app_choice == "Inheritance Simulator":
+    # Unchanged from previous version
     st.header("Inheritance Simulator")
     status_placeholder.markdown("Inheritance Simulator")
-
-    # Input controls
     trait = st.text_input("Trait", value="Eye Color")
     col1, col2 = st.columns(2)
     with col1:
@@ -101,8 +93,6 @@ elif app_choice == "Inheritance Simulator":
         else:
             p1_gametes = [p1[0], p1[1]]
             p2_gametes = [p2[0], p2[1]]
-
-            # Create Punnett square plot
             fig, ax = plt.subplots(figsize=(4, 4))
             for i, p1g in enumerate(p1_gametes):
                 for j, p2g in enumerate(p2_gametes):
@@ -111,21 +101,16 @@ elif app_choice == "Inheritance Simulator":
                     rect = plt.Rectangle((j, -i - 1), 1, 1, color=color, alpha=0.7)
                     ax.add_patch(rect)
                     ax.text(j + 0.5, -i - 0.5, genotype, ha='center', va='center', fontweight='bold', color='white', fontsize=14)
-
-            # Gamete labels
             for i, g in enumerate(p1_gametes):
                 ax.text(-0.3, -i - 0.5, g, ha='center', va='center', fontweight='bold', color='white', fontsize=14)
             for j, g in enumerate(p2_gametes):
                 ax.text(j + 0.5, 0.3, g, ha='center', va='center', fontweight='bold', color='white', fontsize=14)
-
             ax.set_xlim(-0.5, 2)
             ax.set_ylim(-3, 1)
             ax.set_title(f"Punnett Square: {trait}", color='white', fontsize=14)
             ax.set_xticks([])
             ax.set_yticks([])
             st.pyplot(fig)
-
-            # Calculate ratios
             genotypes = {}
             phenotypes = {'Dominant': 0, 'Recessive': 0}
             for p1g in p1_gametes:
@@ -136,15 +121,13 @@ elif app_choice == "Inheritance Simulator":
                         phenotypes['Dominant'] += 1
                     else:
                         phenotypes['Recessive'] += 1
-
             st.markdown(f"**Genotype Ratio:** {'  '.join(f'{g}:{c}/4' for g, c in genotypes.items())}")
             st.markdown(f"**Phenotype Ratio:** {phenotypes['Dominant']}:{phenotypes['Recessive']} ({phenotypes['Dominant']/4*100:.0f}%:{phenotypes['Recessive']/4*100:.0f}%)")
 
 elif app_choice == "Evolution Simulator":
+    # Unchanged from previous version
     st.header("Evolution Simulator")
     status_placeholder.markdown("Evolution Simulator")
-
-    # Sliders for parameters
     p0 = st.slider("Initial Allele Frequency (A)", 0.0, 1.0, 0.6, 0.01)
     s = st.slider("Selection Strength", 0.0, 1.0, 0.2, 0.01)
     generations = st.slider("Generations", 5, 20, 10, 1)
@@ -162,8 +145,6 @@ elif app_choice == "Evolution Simulator":
             p_values.append(p_next)
             q_values.append(1 - p_next)
             p_current = p_next
-
-        # Plot
         fig, ax = plt.subplots(figsize=(4, 4))
         gens = range(generations + 1)
         ax.plot(gens, p_values, color='#4e54c8', linewidth=3, label='Dominant (A)')
@@ -174,7 +155,6 @@ elif app_choice == "Evolution Simulator":
         ax.legend()
         ax.grid(True, alpha=0.3, linestyle='--')
         st.pyplot(fig)
-
         st.markdown(f"**Selection Coefficient:** {s:.2f}")
         st.markdown(f"**Initial:** A={p0:.2f}, a={1-p0:.2f} | **Final:** A={p_values[-1]:.2f}, a={q_values[-1]:.2f}")
 
@@ -182,19 +162,19 @@ elif app_choice == "DNA Translator":
     st.header("DNA Translator")
     status_placeholder.markdown("DNA Translator")
 
-    dna_seq = st.text_input("Enter DNA Sequence", value="ATGCCATAG")
+    # DNA input with key for state management
+    if "translator_seq" not in st.session_state:
+        st.session_state.translator_seq = "ATGCCATAG"
+    dna_seq = st.text_input("Enter DNA Sequence", value=st.session_state.translator_seq, key="translator_seq_input")
+
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Generate Random", key="random_codon"):
             codon_count = random.randint(2, 5)
             bases = ['A', 'T', 'G', 'C']
-            dna_seq = ''.join(random.choice(bases) for _ in range(codon_count * 3))
-            st.session_state.translator_seq = dna_seq
+            st.session_state.translator_seq = ''.join(random.choice(bases) for _ in range(codon_count * 3))
     with col2:
         translate = st.button("Translate DNA", key="translate_dna")
-
-    if "translator_seq" in st.session_state:
-        dna_seq = st.session_state.translator_seq
 
     if translate and dna_seq:
         dna_sequence = dna_seq.upper()
@@ -243,7 +223,6 @@ elif app_choice == "DNA Translator":
                     'I': 'Ile', 'L': 'Leu', 'K': 'Lys', 'M': 'Met', 'F': 'Phe', 'P': 'Pro', 'S': 'Ser', 'T': 'Thr', 'W': 'Trp',
                     'Y': 'Tyr', 'V': 'Val', '*': 'STOP'
                 }
-
                 protein = ""
                 codons = []
                 for i in range(0, len(rna_sequence), 3):
@@ -251,7 +230,6 @@ elif app_choice == "DNA Translator":
                     if len(codon) == 3:
                         codons.append(codon)
                         protein += codon_table.get(codon, '?')
-
                 st.subheader("Protein:")
                 protein_cols = st.columns(len(protein) * 2 - 1)
                 for i, (codon, aa) in enumerate(zip(codons, protein)):
